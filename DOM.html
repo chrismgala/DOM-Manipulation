@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style type="text/css">
+
+	* {
+		line-height: 1.75rem;
+	}
+
+	input {
+		width: 15vw;
+	}
+
+	h1 {
+		font-size: 32px;
+	}
+
+	h2 {
+		padding-top: 3vh;
+		font-size: 26px;
+	}
+
+	h3 {
+		padding-top: 2vh;
+		font-size: 20px;
+	}
+
+	h4 {
+		font-size: 18px;
+	}
+
+	h1, h2, h3 button {
+		padding-right: 1vw;
+		display: inline-block;
+	}
+
+	li {
+		padding-left: 1vw;
+	}
+
+	label, .addCategory {
+		display: block;
+	}
+
+	#inputForm {
+		padding-top: 2vh;
+	}
+
+	</style>
+
+	<script src="https://use.fontawesome.com/54a63c04eb.js"></script>
+</head>
+
+<body>
+
+	<h1><span><i class="fa fa-bars fa-2x" aria-hidden="true"></i></span> Menu</h1>
+
+	<div id="menu">
+	</div>
+
+	<div id="input">
+		<label for="newMenuItem">New Menu Category</label>
+		<input type="text" name="newMenuItem" placeholder="e.g. Food, Drink" />
+		<button id="addParent">Add</button>
+
+		<div id="inputForm">
+
+		</div>
+	</div>
+
+</body>
+
+<script>
+	// DATA //
+
+  // 'menu' Object defined
+	/* An array signifies a leaf node, in which case you move onto a different way of iterating & printing */
+  var menu = {
+		"Food":
+		{
+			"Burgers": [],
+			"Pasta": [],
+			"Appetizers": [],
+			"Entrees": []
+		},
+
+		"Drinks":
+		{
+			"Alcoholic":
+			{
+				"Beer": [],
+				"Wine": []
+			},
+			"Non-Alcoholic":
+			{
+				"Sparkling": [],
+				"Soda": []
+			}
+		},
+
+		"Hookah":
+		{
+			"Starbuzz":
+			{
+					"Flavors": ['cherry'],
+					"LOL": ['haha']
+			}
+		}
+	};
+
+
+	var menu_items = {
+	 "items": [
+	   {
+	     "name": "cherry",
+	     "category": "Hookah.Starbuzz.Flavors",
+			 "price" : "$3.00",
+			 "description" : "fruity"
+	   },
+	   {
+	     "name": "haha",
+	     "category": "Hookah.Starbuzz.LOL",
+			 "price" : "$2.50",
+			 "description" : "weird"
+	   }
+	 ]
+	}
+
+	// Recursive part of displayMenu, nestedJSON will be a JSON Object (may or may not be nested within another JSON Object)
+	function iterateNestedObj(parentName, childObj, accessKeys) {
+		var menuKeys = Object.keys(childObj);
+
+		// In the case that menuKeys is empty, tell the user that the category is empty and prompt for input
+		if (menuKeys.length == 0) {
+			inputCategory(parentName, true);
+		}
+
+    for (var child in childObj) {
+			// If you encounter an Object, create the DOM elements, store the necessary info, and recursively call iterateNestedObj until you hit a leaf node (Array)
+
+			if (!Array.isArray(childObj[child])) {
+
+				createChild(parentName, child, false);
+
+				if ($.inArray(child, accessKeys) > -1)
+					accessKeys.shift();
+
+				var elementIndex = $.inArray(accessKeys[0], menuKeys);
+
+				var matchingKey = menuKeys[elementIndex];
+
+				if (elementIndex > -1 && child == matchingKey) {
+					iterateNestedObj(matchingKey, childObj[matchingKey], accessKeys);
+				}
+			}
+
+			else if (Array.isArray(childObj[child])) {
+				createChild(parentName, child, true);
+
+				createItems(childObj[child], child);
+			}
+
+		}
+
+	}
+
+  // Clear the menu <div> and loop through 'menu' Object to append each element to the menu <div>
+
+  function displayMenu(keys) {
+    $('#menu').empty();
+
+		var menuKeys = Object.keys(menu);
+
+		if (keys) {
+
+			var accessKeys = keys.split(",");
+
+			var elementIndex = $.inArray(accessKeys[0], menuKeys);
+
+			if (elementIndex > -1) {
+				var key = menuKeys[elementIndex];
+
+				createParent(key, accessKeys);
+
+				iterateNestedObj(key, menu[key], accessKeys);
+			}
+		}
+
+		else {
+			for (var i = 0; i < menuKeys.length; i++) {
+				createParent(menuKeys[i]);
+	    }
+		}
+
+		$('#menu').append('<br>');
+  }
+
+  // Display the menu immediately after page loads
+  displayMenu();
+
+
+	// When a new Menu Item is entered and submitted, add it to the 'menu' JSON variable
+	$("#addParent").click(function() {
+		var inputValue = $("input[name=newMenuItem]").val();
+
+		inputValue = lowercaseAndCapitalize(inputValue);
+
+		if (!inputValue) {
+			alert("You did not enter in a value :(");
+		}
+
+		else {
+			menu[inputValue] = {};
+
+			// Display updated menu
+			displayMenu();
+
+			// Clear input field
+			$("input[name=newMenuItem]").val("");
+		}
+	});
+
+
+  // When any .addParent button is clicked, check if the value is empty
+  // Otherwise, add the input value to the corresponding menu key
+  $(document).on('click', '.addParent', function() {
+
+    var inputValue = $("input[name=new" + this.id + "Category]").val();
+
+		inputValue = lowercaseAndCapitalize(inputValue);
+
+		if (inputValue.indexOf(' ') >= 0) {
+			inputValue = inputValue.replace(/ /g, "_");
+		}
+
+    if (!inputValue) {
+      alert("You did not enter in a value :(");
+    }
+
+    else {
+      menu[this.id][inputValue] = {};
+
+			// Display updated menu
+			displayMenu();
+
+			// Clear input field
+			$("input[name=new" + this.id + "Category]").val("");
+    }
+  });
+
+	$(document).on('click', '.addCategory', function() {
+		var key = this.id.slice(3);
+
+		var title = document.createElement("h3");
+		var input = document.createElement("input");
+		var add = document.createElement("button");
+
+		title.innerHTML =
+
+
+		var inputDiv = document.getElementById("inputForm");
+
+		inputDiv.appendChild(title);
+		form.appendChild(input);
+		form.appendChild(add);
+	});
+
+	// Show the contents of the category the button is next to
+	$(document).on('click', '.showContents', function() {
+		// Slice the 'show' out of the id to get which parent node it is under
+		var key = this.id.slice(4);
+		displayMenu(key);
+	});
+
+	$(document).on('click', '.showPrevious', function() {
+		// Slice the 'show' out of the id to get which parent node it is under
+		var key = this.id.slice(4);
+
+		displayMenu(key);
+	});
+
+	function createParent(parentName) {
+		// Create a new ul from the same main categories 'Food' and 'Drink'
+		var parentUl = document.createElement("ul");
+		parentUl.setAttribute('id', parentName.toLowerCase() + 'List');
+
+		// Store the new nestedJSON in a new h2 element
+		var h2 = document.createElement("h2");
+		h2.innerHTML = lowercaseAndCapitalize(parentName);
+
+		var showButton = document.createElement("button");
+		showButton.setAttribute('class', "showContents");
+		showButton.setAttribute('id', 'show' + lowercaseAndCapitalize(parentName));
+		showButton.innerHTML = 'Show ' + lowercaseAndCapitalize(parentName);
+
+		// Get the 'menu' div and append the h1 tag and corresponding 'Food' and 'Drink' ul's
+		var menuDiv = document.getElementById("menu");
+
+		menuDiv.appendChild(parentUl);
+
+		parentUl.appendChild(h2);
+		parentUl.appendChild(showButton);
+	}
+
+	function createChild(parentName, childName, isLeafNode, accessKeys) {
+		var childUl = document.createElement("ul");
+		childUl.setAttribute('id', childName.toLowerCase() + 'List');
+
+		var h3 = document.createElement("h3");
+		h3.innerHTML = "- " + childName;
+
+		childUl.setAttribute('class', "fa-ul");
+
+		parentUl = document.getElementById(parentName.toLowerCase() + 'List');
+
+		parentUl.appendChild(childUl);
+
+		childUl.appendChild(h3);
+
+		var node = document.getElementById(childName.toLowerCase() + 'List');
+		var keyList = [];
+		while (node && node.id.indexOf('List') != -1) {
+			var temp = lowercaseAndCapitalize(cutListFromId(node.id));
+			keyList.push(temp);
+			node = node.parentNode;
+		}
+
+		keyList = keyList.reverse();
+
+		if (!document.getElementsByClassName('showPrevious')[0]) {
+			var backButton = document.createElement("button");
+			backButton.setAttribute('class', "showPrevious");
+
+			backButton.setAttribute('id', 'back');
+			backButton.innerHTML = 'Back';
+
+			parentUl.insertBefore(backButton, parentUl.childNodes[1]);
+		}
+
+		// If it is not a leaf node
+		if (!isLeafNode) {
+			if (document.getElementById('show' + parentName)) {
+				var oldShowButton = document.getElementById('show' + parentName);
+				oldShowButton.parentNode.removeChild(oldShowButton);
+			}
+
+			var showButton = document.createElement('button');
+			showButton.setAttribute('class', 'showContents');
+			showButton.setAttribute('id', 'show' + keyList.toString());
+			showButton.innerHTML = 'Show ' + keyList[keyList.length - 1];
+
+			parentUl.insertBefore(showButton, parentUl.childNodes[keyList.length]);
+		}
+
+		// If it is a leaf node
+		if (isLeafNode) {
+			keyList.pop();
+
+			var showButton = document.getElementById('show' + keyList.toString());
+			showButton.style.visibility = 'hidden';
+
+			keyList.pop();
+
+			// If the button id has not been changed, change it
+			if (document.getElementById('back')) {
+				var backButton = document.getElementById('back');
+
+				backButton.setAttribute('id', 'back' + keyList.toString());
+			}
+		}
+	}
+
+	function createItems(items, parentName) {
+
+		var parentUl = document.getElementById(parentName.toLowerCase() + 'List');
+
+		if (items.length > 0) {
+			for (var i = 0; i < items.length; i++) {
+				for (var item in menu_items["items"]) {
+
+					var itemObj = menu_items["items"][item];
+
+					if (items[i] == itemObj.name) {
+						var ul = document.createElement("ul");
+						var h4 = document.createElement("h4");
+						var price = document.createElement("p");
+						var description = document.createElement("p");
+
+						h4.innerHTML = "<strong>" + lowercaseAndCapitalize(items[i]) + "</strong>";
+						price.innerHTML = "<strong>Price:</strong> " + itemObj.price;
+						description.innerHTML = "<strong>Description:</strong> " + itemObj.description;
+
+						ul.setAttribute('class', 'fa-ul');
+
+						ul.appendChild(h4);
+						ul.appendChild(price);
+						ul.appendChild(description);
+
+						parentUl.appendChild(ul);
+					}
+				}
+			}
+		}
+	}
+
+	function inputCategory(parentName, isEmpty) {
+		// ul id bobaList
+		var parentList = document.getElementById(parentName.toLowerCase() + 'List');
+
+		console.log(parentList);
+
+		var emptyP = document.createElement('p');
+		emptyP.innerHTML = parentName + ' has no items in it';
+
+		var addButton = document.createElement('button');
+		addButton.setAttribute('class', 'addCategory');
+		addButton.setAttribute('id', 'add' + parentName);
+		addButton.innerHTML = 'Add Category';
+
+		parentList.appendChild(emptyP);
+		parentList.appendChild(addButton);
+	}
+
+	// Take a string, make all characters lowercase, and capitalize the correct letters
+	function lowercaseAndCapitalize(str) {
+		return str.toLowerCase().replace(/\b\w/g, letter => letter.toUpperCase());
+	}
+
+	function cutListFromId(str) {
+		return str.substring(0, str.length - 4);
+	}
+
+</script>
+
+</html>
